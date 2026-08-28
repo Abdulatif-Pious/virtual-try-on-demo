@@ -178,8 +178,7 @@ useEffect(() => {
           <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
             {/* CAMERA PLACEHOLDER */}
           {/* CAMERA */}
-          <div className="relative h-[350px] overflow-hidden rounded-2xl bg-[#252525]">
-  {decartConnected && (
+          <div className="relative h-[300px] w-full overflow-hidden rounded-2xl bg-[#252525]">  {decartConnected && (
     <video
       ref={outputVideoRef}
       autoPlay
