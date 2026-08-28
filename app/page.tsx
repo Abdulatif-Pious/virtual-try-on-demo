@@ -94,6 +94,11 @@ useEffect(() => {
 
 useEffect(() => {
   return () => {
+    // Stop Decart realtime session
+    disconnectDecart(decartRef.current);
+    decartRef.current = null;
+
+    // Stop camera
     const stream = videoRef.current?.srcObject as MediaStream | null;
     stream?.getTracks().forEach((track) => track.stop());
   };
