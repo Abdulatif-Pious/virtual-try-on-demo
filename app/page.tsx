@@ -207,8 +207,7 @@ useEffect(() => {
       autoPlay
       playsInline
       muted
-      className="h-full w-full object-contain bg-black"    />
-  )
+      className="absolute inset-0 h-full w-full object-cover"  )
 ) : (
     <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl">
