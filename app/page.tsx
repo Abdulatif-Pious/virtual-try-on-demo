@@ -56,6 +56,7 @@ export default function Home() {
 const decartRef = useRef<Awaited<ReturnType<typeof connectDecart>> | null>(
   null
 );
+
 const startCamera = async () => {
   try {
     setCameraError("");
@@ -71,7 +72,14 @@ const startCamera = async () => {
 
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
-      await videoRef.current.play();
+      
+      // FIX: wait for video metadata before playing
+      videoRef.current.onloadedmetadata = () => {
+        videoRef.current?.play().catch((err) => {
+          console.error("Play error:", err);
+          setCameraError("Camera started but playback failed.");
+        });
+      };
     }
 
     setCameraStarted(true);
@@ -86,7 +94,6 @@ const startCamera = async () => {
 useEffect(() => {
   return () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
-
     stream?.getTracks().forEach((track) => track.stop());
   };
 }, []);
@@ -176,89 +183,92 @@ useEffect(() => {
           </div>
 
           <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-            {/* CAMERA PLACEHOLDER */}
-          {/* CAMERA */}
-          <div className="relative h-[300px] w-full overflow-hidden rounded-2xl bg-[#252525]">  {decartConnected && (
-    <video
-      ref={outputVideoRef}
-      autoPlay
-      playsInline
-      muted
-      className="absolute inset-0 h-full w-full object-cover"
-    />
-  )}
+            {/* CAMERA */}
+            <div className="relative h-[300px] w-full overflow-hidden rounded-2xl bg-[#252525]">
+              {/* output video (decart processed) */}
+              {decartConnected && (
+                <video
+                  ref={outputVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
 
-{cameraStarted || demoMode ? (
-  demoMode && !cameraStarted ? (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-[#252525] text-center">
-      <div className="text-5xl">👗</div>
+              {/* main camera video or demo */}
+              {cameraStarted && !demoMode ? (
+                // camera stream is live - show it
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="h-full w-full object-cover bg-black"
+                />
+              ) : demoMode ? (
+                // demo mode - show placeholder
+                <div className="flex h-full w-full flex-col items-center justify-center bg-[#252525] text-center">
+                  <div className="text-5xl">👗</div>
+                  <p className="mt-4 text-sm text-white/50">
+                    Virtual Try-On Demo
+                  </p>
+                  <p className="mt-2 text-xs text-white/30">
+                    Demo mode · No camera required
+                  </p>
+                </div>
+              ) : (
+                // initial state - show permission prompt
+                <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                  <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl">
+                    ✦
+                  </div>
 
-      <p className="mt-4 text-sm text-white/50">
-        Virtual Try-On Demo
-      </p>
+                  <h3 className="text-xl font-light">
+                    Your virtual fitting room
+                  </h3>
 
-      <p className="mt-2 text-xs text-white/30">
-        Demo mode · No camera required
-      </p>
-    </div>
-  ) : (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted
-      className="h-full w-full object-contain bg-black" />
-  )
-) : (
-    <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl">
-        ✦
-      </div>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-white/40">
+                    Allow camera access to see yourself in the fitting room.
+                  </p>
 
-      <h3 className="text-xl font-light">
-        Your virtual fitting room
-      </h3>
+                  <div className="mt-7 flex flex-col items-center gap-3">
+                    <button
+                      onClick={startCamera}
+                      className="rounded-full bg-white px-7 py-3 text-sm text-black transition hover:bg-white/90"
+                    >
+                      Start camera
+                    </button>
 
-      <p className="mt-2 max-w-sm text-sm leading-6 text-white/40">
-        Allow camera access to see yourself in the fitting room.
-      </p>
+                    <button
+                      onClick={() => {
+                        setDemoMode(true);
+                        setTryOnActive(true);
+                        setSessionStatus("active");
+                        setCameraError("");
+                      }}
+                      className="rounded-full border border-white/15 px-6 py-2.5 text-xs text-white/60 transition hover:bg-white/5"
+                    >
+                      Use Demo Mode
+                    </button>
+                  </div>
 
-        <div className="mt-7 flex flex-col items-center gap-3">
-    <button
-      onClick={startCamera}
-      className="rounded-full bg-white px-7 py-3 text-sm text-black transition hover:bg-white/90"
-    >
-      Start camera
-    </button>
+                  {cameraError && (
+                    <p className="mt-4 text-xs text-red-400">
+                      {cameraError}
+                    </p>
+                  )}
+                </div>
+              )}
 
-    <button
-      onClick={() => {
-        setDemoMode(true);
-        setTryOnActive(true);
-        setSessionStatus("active");
-        setCameraError("");
-      }}
-      className="rounded-full border border-white/15 px-6 py-2.5 text-xs text-white/60 transition hover:bg-white/5"
-    >
-      Use Demo Mode
-    </button>
-</div>
-
-      {cameraError && (
-        <p className="mt-4 text-xs text-red-400">
-          {cameraError}
-        </p>
-      )}
-    </div>
-  )}
-
-  <div className="absolute left-5 top-5 rounded-full bg-black/50 px-3 py-1.5 text-[11px] text-white/60 backdrop-blur">
-  {tryOnActive
-  ? "VIRTUAL TRY-ON · DEMO"
-  : cameraStarted
-    ? "CAMERA ACTIVE"
-    : "LIVE PREVIEW"}  </div>
-</div>
+              <div className="absolute left-5 top-5 rounded-full bg-black/50 px-3 py-1.5 text-[11px] text-white/60 backdrop-blur">
+                {tryOnActive
+                  ? "VIRTUAL TRY-ON · DEMO"
+                  : cameraStarted
+                    ? "CAMERA ACTIVE"
+                    : "LIVE PREVIEW"}
+              </div>
+            </div>
 
             {/* GARMENT SELECTOR */}
             <div>
@@ -311,72 +321,72 @@ useEffect(() => {
               </div>
 
               <button
-  onClick={async () => {
-    if (!cameraStarted) {
-      setCameraError("Start your camera first.");
-      return;
-    }
+                onClick={async () => {
+                  if (!cameraStarted) {
+                    setCameraError("Start your camera first.");
+                    return;
+                  }
 
-    try {
-      setCameraError("");
-      setSessionStatus("connecting");
+                  try {
+                    setCameraError("");
+                    setSessionStatus("connecting");
 
-      const stream = videoRef.current?.srcObject as MediaStream | null;
+                    const stream = videoRef.current?.srcObject as MediaStream | null;
 
-      if (!stream) {
-        throw new Error("Camera stream is unavailable.");
-      }
+                    if (!stream) {
+                      throw new Error("Camera stream is unavailable.");
+                    }
 
-      const realtime = await connectDecart(stream, (remoteStream) => {
-        if (outputVideoRef.current) {
-          outputVideoRef.current.srcObject = remoteStream;
-          outputVideoRef.current.play().catch(() => {});
-        }
-      });
+                    const realtime = await connectDecart(stream, (remoteStream) => {
+                      if (outputVideoRef.current) {
+                        outputVideoRef.current.srcObject = remoteStream;
+                        outputVideoRef.current.play().catch(() => {});
+                      }
+                    });
 
-      decartRef.current = realtime;
+                    decartRef.current = realtime;
 
-      await applyGarment(
-        realtime,
-        selected.image,
-        selected.name
-      );
-      
-      setDecartConnected(true);
-      setTryOnActive(true);
-      setSessionStatus("active");
+                    await applyGarment(
+                      realtime,
+                      selected.image,
+                      selected.name
+                    );
+                    
+                    setDecartConnected(true);
+                    setTryOnActive(true);
+                    setSessionStatus("active");
 
-      console.log("🔥 Decart realtime connected");
-    } catch (error) {
-      console.error("Decart connection failed:", error);
-      setSessionStatus("error");
-      setCameraError("Could not connect to Decart.");
-    }
-  }}
-  className="mt-6 w-full rounded-full bg-white py-4 text-sm text-black transition hover:bg-white/90"
->
-  {tryOnActive ? "Virtual Try-On Active" : `Try ${selected.name}`}
-</button>
+                    console.log("🔥 Decart realtime connected");
+                  } catch (error) {
+                    console.error("Decart connection failed:", error);
+                    setSessionStatus("error");
+                    setCameraError("Could not connect to Decart.");
+                  }
+                }}
+                className="mt-6 w-full rounded-full bg-white py-4 text-sm text-black transition hover:bg-white/90"
+              >
+                {tryOnActive ? "Virtual Try-On Active" : `Try ${selected.name}`}
+              </button>
 
-{tryOnActive && (
-  <button
-  onClick={() => {
-    disconnectDecart(decartRef.current);
-    decartRef.current = null;
-  
-    setDecartConnected(false);
-    setTryOnActive(false);
-    setSessionStatus("stopped");
-  
-    if (outputVideoRef.current) {
-      outputVideoRef.current.srcObject = null;
-    }
-  }}
-    className="mt-3 w-full rounded-full border border-white/10 py-3 text-sm text-white/60 transition hover:bg-white/5"
-  >
-    Stop Try-On
-  </button>
-)}
+              {tryOnActive && (
+                <button
+                  onClick={() => {
+                    disconnectDecart(decartRef.current);
+                    decartRef.current = null;
+                  
+                    setDecartConnected(false);
+                    setTryOnActive(false);
+                    setSessionStatus("stopped");
+                  
+                    if (outputVideoRef.current) {
+                      outputVideoRef.current.srcObject = null;
+                    }
+                  }}
+                  className="mt-3 w-full rounded-full border border-white/10 py-3 text-sm text-white/60 transition hover:bg-white/5"
+                >
+                  Stop Try-On
+                </button>
+              )}
             </div>
           </div>
         </div>
